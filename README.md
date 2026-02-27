@@ -1,6 +1,6 @@
 # Projeto Empresarial
 
- O Projeto (Nome em Desenvolvimento) visa a altomação do proceço de interligação do Inventor para uma tabela no Excel.
+ O Projeto (Nome em Desenvolvimento) visa a automação do processo de interligação do Inventor para uma tabela no Excel.
  
 
 ### Problema
@@ -13,15 +13,15 @@ Pinhalense  - Setor de projetos
 
 ### Objetivo
 
-Automatização de um processo manual poara semi manual
+Automatização de um processo manual para semi manual
 
  ## Projeto  (Nome em Desenvolvimento)
 
-  Desenvolmimento de uma Ia que identifique padroês em croquis de loyuts para sugerir qual o progetista pode usar de base.
+  Desenvolvimento de uma IA que identifique padrões em croquis de layouts para sugerir qual o progetista pode usar de base.
 
 ### Problema
 
- Gasto de tempo excessivo na pesquisa por Loyouts em uma grande bibliotéca de dados
+ Gasto de tempo excessivo na pesquisa por layouts em uma grande bibliotéca de dados
 
 ### Publico
 
