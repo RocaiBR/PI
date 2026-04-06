@@ -12,3 +12,9 @@ Eliminamos o processo manual de copiar linha por linha."
 sem precisar escrever código Python. O modelo aprende os padrões visuais de cada layout. 
 No app, o projetista tira uma foto do croqui e recebe imediatamente uma 
 sugestão de qual layout usar como base, com o percentual de confiança."
+
+Arquitetura,desenhar no quadro:
+
+[Inventor] → exporta CSV → [App Flutter] → valida → gera [Excel]
+
+[Croqui físico] → câmera → [App Flutter] → TFLite → sugere [Layout X]
