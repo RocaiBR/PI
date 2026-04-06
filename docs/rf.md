@@ -11,5 +11,3 @@
 
  O sistema realizara a exportação dos dados do Excel para um PDF 
 
-## RF04 — Regularidade do Aluno
-O sistema deve verificar automaticamente se o aluno está com mensalidade em dia.
