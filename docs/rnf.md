@@ -7,4 +7,4 @@
  Todos os dados sensíveis serão armazenados de forma criptografada.
 
 ## RNF03 — Usabilidade
- A interface deve ser intuitiva e responsiva, adequada para desktop.
+ A interface deve ser intuitiva e responsiva.

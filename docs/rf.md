@@ -9,7 +9,5 @@
 
  ## RF03 — Exportação de dados
 
- O sistema realizara a exportação dos dados do Excel para um PDF 
+ O sistema exportará os dados validados para um arquivo Excel (.xlsx).
 
-## RF04 — Regularidade do Aluno
-O sistema deve verificar automaticamente se o aluno está com mensalidade em dia.
