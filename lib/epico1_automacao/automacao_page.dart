@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'csv_service.dart';
 import 'validacao_service.dart';
 import 'excel_service.dart';
@@ -19,8 +20,15 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
   String _status = 'Aguardando arquivo...';
   bool _carregando = false;
 
+  // Melhoria 4: guarda o caminho do último Excel gerado para compartilhar
+  String? _caminhoExcel;
+
   Future<void> _importar() async {
-    setState(() { _carregando = true; _status = 'Lendo CSV...'; });
+    setState(() {
+      _carregando = true;
+      _status = 'Lendo CSV...';
+      _caminhoExcel = null;
+    });
 
     try {
       final itens = await _csvService.importarCsvInventor();
@@ -46,12 +54,25 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
 
     try {
       final caminho = await _excel.exportarParaExcel(_itens);
-      setState(() { _status = '✅ Excel salvo em:\n$caminho'; });
+      setState(() {
+        _caminhoExcel = caminho;
+        _status = '✅ Excel gerado! Use o botão abaixo para compartilhar.';
+      });
     } catch (e) {
       setState(() { _status = 'Erro ao exportar: $e'; });
     } finally {
       setState(() { _carregando = false; });
     }
+  }
+
+  // Melhoria 4: abre o share sheet nativo do Android
+  Future<void> _compartilhar() async {
+    if (_caminhoExcel == null) return;
+    await Share.shareXFiles(
+      [XFile(_caminhoExcel!)],
+      subject: 'Interligação — Lista de Materiais',
+      text: 'Segue a BOM exportada pelo app Pinhalense.',
+    );
   }
 
   @override
@@ -73,7 +94,7 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
             ),
             const SizedBox(height: 16),
 
-            // Botões
+            // Botões principais
             ElevatedButton.icon(
               onPressed: _carregando ? null : _importar,
               icon: const Icon(Icons.upload_file),
@@ -85,14 +106,32 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
               icon: const Icon(Icons.table_chart),
               label: const Text('2. Exportar para Excel'),
             ),
+
+            // Melhoria 4: botão de compartilhar — visível apenas após exportar
+            if (_caminhoExcel != null) ...[
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: _compartilhar,
+                icon: const Icon(Icons.share),
+                label: const Text('3. Compartilhar Excel'),
+              ),
+            ],
+
             const SizedBox(height: 16),
 
             // Erros de validação
             if (_erros.isNotEmpty) ...[
-              Text('Erros encontrados:', style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.red.shade700,
-              )),
+              Text(
+                'Erros encontrados:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                ),
+              ),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.builder(
@@ -100,7 +139,8 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
                   itemBuilder: (_, i) => Card(
                     color: Colors.red.shade50,
                     child: ListTile(
-                      leading: const Icon(Icons.error_outline, color: Colors.red),
+                      leading: const Icon(Icons.error_outline,
+                          color: Colors.red),
                       title: Text(_erros[i].toString()),
                     ),
                   ),
@@ -110,8 +150,10 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
 
             // Preview dos dados
             if (_erros.isEmpty && _itens.isNotEmpty) ...[
-              Text('Preview (${_itens.length} itens):',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Preview (${_itens.length} itens):',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.builder(
@@ -120,10 +162,11 @@ class _AutomacaoPageState extends State<AutomacaoPage> {
                     final item = _itens[i];
                     return ListTile(
                       leading: Text('${i + 1}',
-                        style: const TextStyle(color: Colors.grey)),
+                          style: const TextStyle(color: Colors.grey)),
                       title: Text(item.descricao),
                       subtitle: Text('Cód: ${item.codigo}'),
-                      trailing: Text('${item.quantidade} ${item.unidade}'),
+                      trailing:
+                          Text('${item.quantidade} ${item.unidade}'),
                     );
                   },
                 ),

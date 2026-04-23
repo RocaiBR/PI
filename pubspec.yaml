@@ -21,6 +21,13 @@ dependencies:
   image: ^4.1.7
   permission_handler: ^11.3.0
 
+  # Melhoria 4: compartilhar arquivos pelo share sheet nativo
+  share_plus: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
 flutter:
   assets:
     - assets/modelo/
