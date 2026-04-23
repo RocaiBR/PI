@@ -3,6 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'classificador_service.dart';
 
+// Melhoria 3: modelo para o histórico de análises
+class EntradaHistorico {
+  final File imagem;
+  final String layoutSugerido;
+  final double confianca;
+  final DateTime data;
+
+  EntradaHistorico({
+    required this.imagem,
+    required this.layoutSugerido,
+    required this.confianca,
+    required this.data,
+  });
+}
+
 class IaPage extends StatefulWidget {
   const IaPage({super.key});
   @override
@@ -18,11 +33,26 @@ class _IaPageState extends State<IaPage> {
   bool _carregando = true;
   bool _analisando = false;
 
+  // Melhoria 1: controle de erro no carregamento
+  String? _erroCarregamento;
+
+  // Melhoria 3: histórico de análises em memória
+  final List<EntradaHistorico> _historico = [];
+
   @override
   void initState() {
     super.initState();
     _classificador.carregar().then((_) {
-      setState(() { _carregando = false; });
+      if (mounted) setState(() { _carregando = false; });
+    }).catchError((e) {
+      // Melhoria 1: exibe erro em vez de spinner infinito
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+          _erroCarregamento =
+              'Não foi possível carregar o modelo de IA.\n\nDetalhes: $e';
+        });
+      }
     });
   }
 
@@ -42,16 +72,36 @@ class _IaPageState extends State<IaPage> {
   }
 
   Future<void> _analisar(File arquivo) async {
-    setState(() { _imagem = arquivo; _analisando = true; _resultados = []; });
+    setState(() {
+      _imagem = arquivo;
+      _analisando = true;
+      _resultados = [];
+    });
     try {
       final resultados = await _classificador.classificar(arquivo);
-      setState(() { _resultados = resultados; });
+      setState(() {
+        _resultados = resultados;
+        // Melhoria 3: adiciona ao histórico
+        if (resultados.isNotEmpty) {
+          _historico.insert(
+            0,
+            EntradaHistorico(
+              imagem: arquivo,
+              layoutSugerido: resultados.first.layout,
+              confianca: resultados.first.confianca,
+              data: DateTime.now(),
+            ),
+          );
+        }
+      });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro na análise: $e')),
+        );
+      }
     } finally {
-      setState(() { _analisando = false; });
+      if (mounted) setState(() { _analisando = false; });
     }
   }
 
@@ -61,20 +111,105 @@ class _IaPageState extends State<IaPage> {
     super.dispose();
   }
 
+  // Melhoria 3: aba de histórico
+  Widget _buildHistorico() {
+    if (_historico.isEmpty) {
+      return const Center(
+        child: Text(
+          'Nenhuma análise realizada ainda.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _historico.length,
+      itemBuilder: (_, i) {
+        final h = _historico[i];
+        final hora =
+            '${h.data.hour.toString().padLeft(2, '0')}:${h.data.minute.toString().padLeft(2, '0')}';
+        return Card(
+          child: ListTile(
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.file(h.imagem,
+                  width: 50, height: 50, fit: BoxFit.cover),
+            ),
+            title: Text(h.layoutSugerido,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+                '${(h.confianca * 100).toStringAsFixed(1)}% de confiança — $hora'),
+            trailing:
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('IA — Identificar Layout')),
-      body: _carregando
-          ? const Center(child: Column(
+    // Melhoria 1: tela de erro no carregamento
+    if (_erroCarregamento != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('IA — Identificar Layout')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 12),
-                Text('Carregando modelo de IA...'),
+                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text(_erroCarregamento!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14)),
               ],
-            ))
-          : SingleChildScrollView(
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_carregando) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('IA — Identificar Layout')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Carregando modelo de IA...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('IA — Identificar Layout'),
+          bottom: TabBar(
+            tabs: [
+              const Tab(icon: Icon(Icons.camera_alt), text: 'Analisar'),
+              Tab(
+                icon: Badge(
+                  label: Text('${_historico.length}'),
+                  isLabelVisible: _historico.isNotEmpty,
+                  child: const Icon(Icons.history),
+                ),
+                text: 'Histórico',
+              ),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Aba principal — análise
+            SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
@@ -90,11 +225,12 @@ class _IaPageState extends State<IaPage> {
                     child: _imagem != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(_imagem!, fit: BoxFit.contain),
+                            child:
+                                Image.file(_imagem!, fit: BoxFit.contain),
                           )
                         : const Center(
                             child: Text('Nenhuma imagem selecionada',
-                              style: TextStyle(color: Colors.grey)),
+                                style: TextStyle(color: Colors.grey)),
                           ),
                   ),
                   const SizedBox(height: 16),
@@ -123,16 +259,15 @@ class _IaPageState extends State<IaPage> {
                   if (_analisando)
                     const CircularProgressIndicator()
                   else if (_resultados.isNotEmpty) ...[
-                    // Melhor resultado em destaque
                     Card(
                       color: Colors.green.shade50,
                       child: ListTile(
                         leading: const Icon(Icons.auto_awesome,
-                          color: Colors.green, size: 32),
+                            color: Colors.green, size: 32),
                         title: Text(
                           '💡 Sugestão: ${_resultados.first.layout}',
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         subtitle: Text(
                           'Confiança: ${(_resultados.first.confianca * 100).toStringAsFixed(1)}%',
@@ -140,33 +275,40 @@ class _IaPageState extends State<IaPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Demais resultados
                     const Text('Todas as probabilidades:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     ..._resultados.map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(r.layout),
-                          const SizedBox(height: 4),
-                          LinearProgressIndicator(
-                            value: r.confianca,
-                            backgroundColor: Colors.grey.shade200,
-                            color: r == _resultados.first
-                                ? Colors.green : Colors.blue,
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(r.layout),
+                              const SizedBox(height: 4),
+                              LinearProgressIndicator(
+                                value: r.confianca,
+                                backgroundColor: Colors.grey.shade200,
+                                color: r == _resultados.first
+                                    ? Colors.green
+                                    : Colors.blue,
+                              ),
+                              Text(
+                                '${(r.confianca * 100).toStringAsFixed(1)}%',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
                           ),
-                          Text('${(r.confianca * 100).toStringAsFixed(1)}%',
-                            style: const TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    )),
+                        )),
                   ],
                 ],
               ),
             ),
+
+            // Aba histórico
+            _buildHistorico(),
+          ],
+        ),
+      ),
     );
   }
 }
