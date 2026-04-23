@@ -16,7 +16,7 @@ class ClassificadorService {
 
   // Chame isso no initState da tela
   Future<void> carregar() async {
-    _interpreter = await Interpreter.fromAsset('assets/modelo/model.tflite');
+    _interpreter = await Interpreter.fromAsset('assets/modelo/model_unquant.tflite');
 
     final labelsData = await rootBundle.loadString('assets/modelo/labels.txt');
     _labels = labelsData
