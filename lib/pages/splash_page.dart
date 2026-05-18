@@ -28,7 +28,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     _logoController.forward();
 
     Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) Navigator.pushReplacementNamed(context, '/');
     });
   }
 
