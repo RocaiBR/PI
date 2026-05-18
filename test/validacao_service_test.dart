@@ -1,11 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pinhalense/epico1_automacao/csv_service.dart';
-import 'package:pinhalense/epico1_automacao/validacao_service.dart';
+import 'package:aividade_pi_marcelo/epico1_automacao/csv_service.dart';
+import 'package:aividade_pi_marcelo/epico1_automacao/validacao_service.dart';
 
 void main() {
   final validacao = ValidacaoService();
 
-  // Helper para criar itens de teste facilmente
   ItemInventor item({
     String codigo = 'COD-001',
     String descricao = 'Peça Teste',
@@ -22,13 +21,11 @@ void main() {
 
   group('ValidacaoService —', () {
     test('lista vazia não retorna erros', () {
-      final erros = validacao.validar([]);
-      expect(erros, isEmpty);
+      expect(validacao.validar([]), isEmpty);
     });
 
     test('item válido não retorna erros', () {
-      final erros = validacao.validar([item()]);
-      expect(erros, isEmpty);
+      expect(validacao.validar([item()]), isEmpty);
     });
 
     test('código vazio gera erro no campo Código', () {
@@ -56,11 +53,10 @@ void main() {
       expect(erros.any((e) => e.campo == 'Quantidade'), isTrue);
     });
 
-    test('item com todos os campos vazios gera 3 erros', () {
+    test('item com todos os campos inválidos gera 4 erros', () {
       final erros = validacao.validar([
         item(codigo: '', descricao: '', unidade: '', quantidade: 0),
       ]);
-      // codigo, descricao, unidade, quantidade = 4 erros
       expect(erros.length, 4);
     });
 
@@ -71,9 +67,9 @@ void main() {
 
     test('múltiplos itens — erros apontam linhas corretas', () {
       final itens = [
-        item(),           // linha 2 — válido
-        item(codigo: ''), // linha 3 — inválido
-        item(),           // linha 4 — válido
+        item(),
+        item(codigo: ''),
+        item(),
       ];
       final erros = validacao.validar(itens);
       expect(erros.length, 1);
