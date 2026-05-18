@@ -1,106 +1,76 @@
 import 'package:flutter/material.dart';
-import 'epico1_automacao/automacao_page.dart';
-import 'epico2_ia/ia_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'app_theme.dart';
+import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/search_screen.dart';
+import 'screens/faq_screen.dart';
+import 'pages/register_page.dart';
+import 'pages/splash_page.dart';
+import 'pages/home_page.dart';
+import 'pages/faq_page.dart';
+import 'pages/recovery_page.dart';
+import 'pages/profile_page.dart';
+import 'pages/settings_page.dart';
+import 'pages/details_page.dart';
+import 'pages/marcelaoparte.dart';
+import 'pages/admin_banco_page.dart'; // ← novo
 
-void main() => runApp(const PinhalenseApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const TotApp());
+}
 
-class PinhalenseApp extends StatelessWidget {
-  const PinhalenseApp({super.key});
+class TotApp extends StatelessWidget {
+  const TotApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pinhalense — Setor de Projetos',
+      title: 'Tot - Assistente Interno',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorSchemeSeed: Colors.blue,
         useMaterial3: true,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pinhalense — Projetos'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Selecione o módulo:',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 32),
-
-            // Épico 1
-            Card(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AutomacaoPage())),
-                child: const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Row(children: [
-                    Icon(Icons.table_chart, size: 40, color: Colors.blue),
-                    SizedBox(width: 16),
-                    Expanded(child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Épico 1', style: TextStyle(
-                          color: Colors.grey, fontSize: 12)),
-                        Text('Automação da Interligação',
-                          style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('CSV do Inventor → Excel'),
-                      ],
-                    )),
-                    Icon(Icons.arrow_forward_ios, color: Colors.grey),
-                  ]),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Épico 2
-            Card(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const IaPage())),
-                child: const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Row(children: [
-                    Icon(Icons.auto_awesome, size: 40, color: Colors.purple),
-                    SizedBox(width: 16),
-                    Expanded(child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Épico 2', style: TextStyle(
-                          color: Colors.grey, fontSize: 12)),
-                        Text('IA para Identificação de Layout',
-                          style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('Foto do croqui → Sugestão de layout'),
-                      ],
-                    )),
-                    Icon(Icons.arrow_forward_ios, color: Colors.grey),
-                  ]),
-                ),
-              ),
-            ),
-          ],
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.dark,
         ),
+        primaryColor: AppColors.primary,
+        scaffoldBackgroundColor: AppColors.surface,
       ),
+      initialRoute: '/splash',
+      routes: {
+        '/': (context) => const LoginScreen(),
+        '/home_screen': (context) => const HomeScreen(),
+        '/register': (context) => const RegisterPage(),
+        '/splash': (context) => const SplashPage(),
+        '/home': (context) => const HomePage(),
+        '/faq': (context) => const FaqPage(),
+        '/recovery': (context) => const RecoveryPage(),
+        '/profile': (context) => const ProfilePage(),
+        '/settings': (context) => const SettingsPage(),
+        '/details': (context) => const DetailsPage(),
+        '/marcela_login': (context) => const MarcelaLoginPage(),
+        '/search_screen': (context) => const SearchScreen(),
+        '/faq_screen': (context) => const FaqScreen(),
+        '/admin_banco': (context) => const AdminBancoPage(), // ← novo
+      },
+      onGenerateRoute: (settings) {
+        return PageRouteBuilder(
+          settings: settings,
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const LoginScreen(),
+          transitionDuration: const Duration(milliseconds: 350),
+          reverseTransitionDuration: const Duration(milliseconds: 250),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
     );
   }
 }
