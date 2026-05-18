@@ -1,5 +1,5 @@
 name: aividade_pi_marcelo
-description: "A new Flutter project."
+description: "TOT — Assistente Interno Pinhalense (PI)"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,23 +11,42 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # UI
   cupertino_icons: ^1.0.8
+
+  # Firebase
   firebase_core: ^4.7.0
   firebase_auth: ^6.4.0
   cloud_firestore: ^6.3.0
-  image_picker: ^1.2.2
   firebase_storage: ^13.4.0
+
+  # Rede e upload
   http: ^1.6.0
+
+  # Imagens
+  image_picker: ^1.2.2
+
+  # Épico 1 — Automação
+  csv: ^6.0.0
+  file_picker: ^8.1.2
+  excel: ^4.0.6
+  path_provider: ^2.1.4
+  share_plus: ^9.0.0
+
+  # Épico 2 — IA
+  tflite_flutter: ^0.10.4
+  image: ^4.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
 
 flutter:
-
   uses-material-design: true
 
   assets:
     - assets/images/logo.png
+    - assets/logo_pinhalense.png
+    - assets/modelo/labels.txt
+    - assets/modelo/
