@@ -1,9 +1,19 @@
+// ============================================================
+// ARQUIVO: lib/epico2_ia/ia_page.dart
+//
+// CORREÇÕES APLICADAS
+// [ALTO]  Adicionadas guardas em _tirarFoto() e _escolherGaleria()
+//         para impedir chamada ao classificador quando o modelo
+//         falhou ao carregar (_erroCarregamento != null).
+// [MÉDIO] Todos os setState dentro de blocos catch/finally
+//         agora têm guarda "if (!mounted) return" antes.
+// ============================================================
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'classificador_service.dart';
 
-// Melhoria 3: modelo para o histórico de análises
 class EntradaHistorico {
   final File imagem;
   final String layoutSugerido;
@@ -32,20 +42,15 @@ class _IaPageState extends State<IaPage> {
   List<Resultado> _resultados = [];
   bool _carregando = true;
   bool _analisando = false;
-
-  // Melhoria 1: controle de erro no carregamento
   String? _erroCarregamento;
-
-  // Melhoria 3: histórico de análises em memória
   final List<EntradaHistorico> _historico = [];
 
   @override
   void initState() {
     super.initState();
     _classificador.carregar().then((_) {
-      if (mounted) setState(() { _carregando = false; });
+      if (mounted) setState(() => _carregando = false);
     }).catchError((e) {
-      // Melhoria 1: exibe erro em vez de spinner infinito
       if (mounted) {
         setState(() {
           _carregando = false;
@@ -57,6 +62,9 @@ class _IaPageState extends State<IaPage> {
   }
 
   Future<void> _tirarFoto() async {
+    // ✅ CORREÇÃO [ALTO]: impede uso do classificador se o modelo falhou
+    if (_erroCarregamento != null) return;
+
     final foto = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 80,
@@ -66,6 +74,9 @@ class _IaPageState extends State<IaPage> {
   }
 
   Future<void> _escolherGaleria() async {
+    // ✅ CORREÇÃO [ALTO]: mesma guarda
+    if (_erroCarregamento != null) return;
+
     final foto = await _picker.pickImage(source: ImageSource.gallery);
     if (foto == null) return;
     await _analisar(File(foto.path));
@@ -79,9 +90,11 @@ class _IaPageState extends State<IaPage> {
     });
     try {
       final resultados = await _classificador.classificar(arquivo);
+
+      // ✅ CORREÇÃO [MÉDIO]: guarda mounted antes de setState pós-await
+      if (!mounted) return;
       setState(() {
         _resultados = resultados;
-        // Melhoria 3: adiciona ao histórico
         if (resultados.isNotEmpty) {
           _historico.insert(
             0,
@@ -95,13 +108,13 @@ class _IaPageState extends State<IaPage> {
         }
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro na análise: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro na análise: $e')),
+      );
     } finally {
-      if (mounted) setState(() { _analisando = false; });
+      // ✅ CORREÇÃO [MÉDIO]: guarda mounted no finally
+      if (mounted) setState(() => _analisando = false);
     }
   }
 
@@ -111,14 +124,11 @@ class _IaPageState extends State<IaPage> {
     super.dispose();
   }
 
-  // Melhoria 3: aba de histórico
   Widget _buildHistorico() {
     if (_historico.isEmpty) {
       return const Center(
-        child: Text(
-          'Nenhuma análise realizada ainda.',
-          style: TextStyle(color: Colors.grey),
-        ),
+        child: Text('Nenhuma análise realizada ainda.',
+            style: TextStyle(color: Colors.grey)),
       );
     }
     return ListView.builder(
@@ -149,7 +159,6 @@ class _IaPageState extends State<IaPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Melhoria 1: tela de erro no carregamento
     if (_erroCarregamento != null) {
       return Scaffold(
         appBar: AppBar(title: const Text('IA — Identificar Layout')),
@@ -208,12 +217,10 @@ class _IaPageState extends State<IaPage> {
         ),
         body: TabBarView(
           children: [
-            // Aba principal — análise
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Preview da imagem
                   Container(
                     height: 260,
                     width: double.infinity,
@@ -225,8 +232,7 @@ class _IaPageState extends State<IaPage> {
                     child: _imagem != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child:
-                                Image.file(_imagem!, fit: BoxFit.contain),
+                            child: Image.file(_imagem!, fit: BoxFit.contain),
                           )
                         : const Center(
                             child: Text('Nenhuma imagem selecionada',
@@ -234,8 +240,6 @@ class _IaPageState extends State<IaPage> {
                           ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Botões
                   Row(children: [
                     Expanded(
                       child: ElevatedButton.icon(
@@ -254,8 +258,6 @@ class _IaPageState extends State<IaPage> {
                     ),
                   ]),
                   const SizedBox(height: 20),
-
-                  // Resultados
                   if (_analisando)
                     const CircularProgressIndicator()
                   else if (_resultados.isNotEmpty) ...[
@@ -303,8 +305,6 @@ class _IaPageState extends State<IaPage> {
                 ],
               ),
             ),
-
-            // Aba histórico
             _buildHistorico(),
           ],
         ),

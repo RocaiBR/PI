@@ -10,4 +10,3 @@
  ## RF03 — Exportação de dados
 
  O sistema exportará os dados validados para um arquivo Excel (.xlsx).
-

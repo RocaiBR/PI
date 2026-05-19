@@ -1,0 +1,15 @@
+# ============================================================
+# ARQUIVO: analysis_options.yaml  (raiz do projeto)
+#
+# CORREÇÃO [CRÍTICO]: o arquivo original continha o conteúdo
+# do pubspec.yaml por engano, desabilitando toda análise estática.
+# ============================================================
+
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    avoid_print: true          # força uso de kDebugMode antes de print()
+    prefer_const_constructors: true
+    prefer_final_fields: true
+    unnecessary_nullable_for_final_variable_declarations: true
