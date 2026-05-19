@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/ia_service.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class ChatMessage {
   final String sender;
@@ -216,7 +217,7 @@ class _HomePageState extends State<HomePage> {
               });
             }
           } catch (e) {
-            print('Erro ao baixar imagem do banco: $e');
+            if (kDebugMode) print('Erro ao baixar imagem do banco: $e');
           }
         }
 
