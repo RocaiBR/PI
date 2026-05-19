@@ -1,33 +1,15 @@
-name: aividade_pi_marcelo
-description: "A new Flutter project."
-publish_to: 'none'
+# ============================================================
+# ARQUIVO: analysis_options.yaml  (raiz do projeto)
+#
+# CORREÇÃO [CRÍTICO]: o arquivo original continha o conteúdo
+# do pubspec.yaml por engano, desabilitando toda análise estática.
+# ============================================================
 
-version: 1.0.0+1
+include: package:flutter_lints/flutter.yaml
 
-environment:
-  sdk: ">=3.0.0 <4.0.0"
-
-dependencies:
-  flutter:
-    sdk: flutter
-
-  cupertino_icons: ^1.0.8
-  firebase_core: ^4.7.0
-  firebase_auth: ^6.4.0
-  cloud_firestore: ^6.3.0
-  image_picker: ^1.2.2
-  firebase_storage: ^13.4.0
-  http: ^1.6.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
-  flutter_lints: ^6.0.0
-
-flutter:
-
-  uses-material-design: true
-
-  assets:
-    - assets/logo_pinhalense.png
+linter:
+  rules:
+    avoid_print: true          # força uso de kDebugMode antes de print()
+    prefer_const_constructors: true
+    prefer_final_fields: true
+    unnecessary_nullable_for_final_variable_declarations: true

@@ -1,3 +1,11 @@
+// ============================================================
+// ARQUIVO: lib/screens/login_screen.dart
+//
+// CORREÇÕES APLICADAS
+// [CRÍTICO] Removido backdoor admin/123 (linhas ~60-63 originais)
+//           que permitia login sem Firebase Auth.
+// ============================================================
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +15,6 @@ import '../app_theme.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
-  // @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
@@ -18,40 +25,40 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // ── Cores dinâmicas (segue o tema do sistema) ─────────────────────────────
   bool get _isDark =>
       MediaQuery.of(context).platformBrightness == Brightness.dark;
 
   Color get _bgColor => _isDark ? AppColors.surface : const Color(0xFFF7F3F5);
-
   Color get _textColor =>
       _isDark ? AppColors.textPrimary : const Color(0xFF1C0F18);
-
   Color get _subText =>
       _isDark ? AppColors.textSecondary : const Color(0xFF7A5566);
-
   Color get _inputFill => _isDark ? const Color(0xFF1E0D14) : Colors.white;
-
   Color get _inputBorder => _isDark
       ? AppColors.primary.withOpacity(0.35)
       : AppColors.primary.withOpacity(0.25);
 
   Future<void> _fazerLogin() async {
-    final emailInput = _emailController.text.trim();
-    final senhaInput = _senhaController.text;
-
-    if (emailInput == 'admin' && senhaInput == '123') {
-      Navigator.pushReplacementNamed(context, '/home',
-          arguments: 'Administrador');
-      return;
-    }
+    // ✅ CORREÇÃO [CRÍTICO]: removido o bloco abaixo que existia aqui:
+    //
+    //   if (emailInput == 'admin' && senhaInput == '123') {
+    //     Navigator.pushReplacementNamed(context, '/home', arguments: 'Administrador');
+    //     return;
+    //   }
+    //
+    // Qualquer acesso, inclusive administrativo, deve passar pelo Firebase Auth.
+    // Crie uma conta de admin normalmente pelo Firebase Console e atribua
+    // uma custom claim "admin: true" via Firebase Admin SDK se precisar
+    // diferenciar permissões.
 
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final emailSanitizado = sanitize(emailInput);
+      final emailSanitizado = sanitize(_emailController.text.trim());
+      final senhaInput = _senhaController.text;
+
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
               email: emailSanitizado, password: senhaInput);
@@ -61,10 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
           .doc(userCredential.user!.uid)
           .get();
 
-      String nomeUsuario = "Usuário";
+      String nomeUsuario = 'Usuário';
       if (userDoc.exists && userDoc.data() != null) {
         nomeUsuario =
-            (userDoc.data() as Map<String, dynamic>)['nome'] ?? "Usuário";
+            (userDoc.data() as Map<String, dynamic>)['nome'] ?? 'Usuário';
       }
 
       if (mounted) {
@@ -72,14 +79,16 @@ class _LoginScreenState extends State<LoginScreen> {
             arguments: nomeUsuario);
       }
     } on FirebaseAuthException catch (e) {
-      String mensagemErro = "Erro ao fazer login.";
+      String mensagemErro = 'Erro ao fazer login.';
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential') {
-        mensagemErro = "E-mail ou senha incorretos.";
+        mensagemErro = 'E-mail ou senha incorretos.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(mensagemErro), backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(mensagemErro), backgroundColor: Colors.red));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -137,7 +146,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Logo do App ──────────────────────────────────────────────
                 Container(
                   width: 110,
                   height: 110,
@@ -155,15 +163,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      fit: BoxFit.cover,
-                    ),
+                    child: Image.asset('assets/images/logo.png',
+                        fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(height: 28),
-
-                // ── Título ───────────────────────────────────────────────────
                 Text(
                   'Bem-vindo ao Tot',
                   style: TextStyle(
@@ -174,13 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'Faça login para continuar',
-                  style: TextStyle(fontSize: 14, color: _subText),
-                ),
+                Text('Faça login para continuar',
+                    style: TextStyle(fontSize: 14, color: _subText)),
                 const SizedBox(height: 32),
-
-                // ── Campos ───────────────────────────────────────────────────
                 _buildModernInput(
                   controller: _emailController,
                   label: 'E-mail',
@@ -203,43 +203,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pushNamed(context, '/recovery'),
-                    child: Text(
-                      'Esqueci minha senha',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Text('Esqueci minha senha',
+                        style: TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // ── Botão Entrar ─────────────────────────────────────────────
                 _isLoading
                     ? const CircularProgressIndicator(color: AppColors.primary)
                     : AnimatedPressButton(
                         onPressed: _fazerLogin,
-                        child: const Text(
-                          'ENTRAR',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
+                        child: const Text('ENTRAR',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2)),
                       ),
                 const SizedBox(height: 20),
-
-                // ── Cadastro ─────────────────────────────────────────────────
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, '/register'),
-                  child: Text(
-                    'Não tem uma conta? Cadastre-se',
-                    style: TextStyle(
-                      color: _isDark ? _subText : AppColors.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  child: Text('Não tem uma conta? Cadastre-se',
+                      style: TextStyle(
+                          color: _isDark ? _subText : AppColors.primary,
+                          fontWeight: FontWeight.w500)),
                 ),
               ],
             ),

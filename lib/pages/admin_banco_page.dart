@@ -1,3 +1,13 @@
+// ============================================================
+// ARQUIVO: lib/pages/admin_banco_page.dart
+//
+// CORREÇÕES APLICADAS
+// [ALTO] Adicionada verificação de FirebaseAuth.instance.currentUser
+//        antes de qualquer upload para o Cloudinary.
+//        Sem isso, qualquer pessoa com o cloud name e o preset
+//        poderia fazer upload diretamente — independente de login.
+// ============================================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
@@ -5,6 +15,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../app_theme.dart';
 
 class AdminBancoPage extends StatefulWidget {
@@ -28,6 +39,7 @@ class _AdminBancoPageState extends State<AdminBancoPage> {
   Future<void> _carregarBanco() async {
     final snapshot =
         await FirebaseFirestore.instance.collection('banco_imagens').get();
+    if (!mounted) return;
     setState(() {
       _imagensBanco =
           snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
@@ -35,18 +47,31 @@ class _AdminBancoPageState extends State<AdminBancoPage> {
   }
 
   Future<void> _adicionarImagem() async {
+    // ✅ CORREÇÃO [ALTO]: verifica autenticação antes do upload.
+    // Sem isso qualquer pessoa com cloud name + preset faz upload.
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Você precisa estar autenticado para fazer upload.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
     setState(() => _isUploading = true);
 
     try {
-      // Lê os bytes
       final bytes = kIsWeb
           ? await image.readAsBytes()
           : await File(image.path).readAsBytes();
 
-      // Sobe para o Cloudinary
       const String cloudName = 'dn2vlkwuf';
       const String uploadPreset = 'TOT_CHAT';
 
@@ -67,11 +92,11 @@ class _AdminBancoPageState extends State<AdminBancoPage> {
         final data = jsonDecode(await response.stream.bytesToString());
         final imageUrl = data['secure_url'] as String;
 
-        // Salva a URL no Firestore
         await FirebaseFirestore.instance.collection('banco_imagens').add({
           'imageUrl': imageUrl,
           'nome': image.name,
           'adicionadoEm': DateTime.now().toIso8601String(),
+          'adicionadoPor': user.uid, // ✅ rastreia quem fez o upload
         });
 
         if (mounted) {
@@ -90,10 +115,7 @@ class _AdminBancoPageState extends State<AdminBancoPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -135,8 +157,7 @@ class _AdminBancoPageState extends State<AdminBancoPage> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.add_photo_alternate,
-                        color: Colors.white),
+                    : const Icon(Icons.add_photo_alternate, color: Colors.white),
                 label: Text(
                   _isUploading
                       ? 'Enviando...'

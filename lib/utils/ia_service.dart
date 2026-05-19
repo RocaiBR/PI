@@ -1,10 +1,27 @@
+// ============================================================
+// ARQUIVO: lib/utils/ia_service.dart
+//
+// CORREÇÕES APLICADAS
+// [ALTO] Todos os print() substituídos por blocos condicionais
+//        com kDebugMode — em builds de release (APK final)
+//        nenhum dado de payload ou erro vaza via adb logcat.
+//
+// NOTA ARQUITETURAL [ALTO — não resolvido aqui]:
+//   A _geminiKey via dart-define ainda é embutida no APK.
+//   A solução correta é mover a chamada ao Gemini para um
+//   Cloud Function (Firebase Functions) e o app apenas
+//   chamar esse endpoint autenticado. Isso requer mudança
+//   de arquitetura e está fora do escopo deste PR de fixes.
+// ============================================================
+
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 
 class IaService {
   static const String _geminiKey = String.fromEnvironment(
-    'GEMINI_API_KEY', // ← o NOME da variável, não a chave
+    'GEMINI_API_KEY',
     defaultValue: '',
   );
 
@@ -17,7 +34,10 @@ class IaService {
     required String textoUsuario,
   }) async {
     if (_geminiKey.isEmpty) {
-      print('[IaService] GEMINI_API_KEY não configurada!');
+      // ✅ CORREÇÃO [ALTO]: era print() sem guarda — visível em produção
+      if (kDebugMode) {
+        print('[IaService] GEMINI_API_KEY não configurada!');
+      }
       return {
         'erro':
             'Chave da API não configurada. Rode com --dart-define=GEMINI_API_KEY=sua_chave'
@@ -55,7 +75,6 @@ Se nenhuma imagem for suficientemente similar, responda:
 '''
       });
 
-      // Imagem do usuário em base64
       parts.add({
         'inlineData': {
           'mimeType': 'image/jpeg',
@@ -68,8 +87,6 @@ Se nenhuma imagem for suficientemente similar, responda:
 
       for (int i = 0; i < bancoParcial.length; i++) {
         parts.add({'text': 'Imagem do banco ${i + 1}:'});
-
-        // ✅ CORREÇÃO: usa bytes baixados (inlineData) ao invés de URL externa
         final imageBytes = bancoParcial[i]['bytes'] as Uint8List?;
         if (imageBytes != null) {
           parts.add({
@@ -81,17 +98,24 @@ Se nenhuma imagem for suficientemente similar, responda:
         }
       }
 
-      print(
-          '[IaService] Enviando para o Gemini com ${bancoParcial.length} imagem(ns)...');
+      // ✅ CORREÇÃO [ALTO]: print com tamanho do payload só em debug
+      if (kDebugMode) {
+        final requestBody = jsonEncode({
+          'contents': [
+            {'parts': parts}
+          ]
+        });
+        print(
+            '[IaService] Enviando para Gemini com ${bancoParcial.length} imagem(ns)...');
+        print(
+            '[IaService] Payload: ${(requestBody.length / 1024).toStringAsFixed(1)} KB');
+      }
 
       final requestBody = jsonEncode({
         'contents': [
           {'parts': parts}
         ]
       });
-
-      print(
-          '[IaService] Payload: ${(requestBody.length / 1024).toStringAsFixed(1)} KB');
 
       final response = await http
           .post(
@@ -101,22 +125,28 @@ Se nenhuma imagem for suficientemente similar, responda:
           )
           .timeout(const Duration(seconds: 60));
 
-      print('[IaService] Status: ${response.statusCode}');
+      // ✅ CORREÇÃO [ALTO]: status code e resposta só em debug
+      if (kDebugMode) {
+        print('[IaService] Status: ${response.statusCode}');
+      }
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
 
         if (decoded['candidates'] == null ||
             (decoded['candidates'] as List).isEmpty) {
+          if (kDebugMode) {
+            print('[IaService] Gemini sem candidatos: ${response.body}');
+          }
           return {
-            'erro': 'Gemini não retornou candidatos. Resposta: ${response.body}'
+            'erro': 'Gemini não retornou candidatos.'
           };
         }
 
         final textoBruto =
             decoded['candidates'][0]['content']['parts'][0]['text'] as String;
 
-        print('[IaService] Resposta: $textoBruto');
+        if (kDebugMode) print('[IaService] Resposta: $textoBruto');
 
         final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(textoBruto);
 
@@ -134,7 +164,10 @@ Se nenhuma imagem for suficientemente similar, responda:
             return {'imageUrl': null, 'mensagem': mensagem};
           }
         } else {
-          return {'erro': 'Resposta inesperada do Gemini: $textoBruto'};
+          if (kDebugMode) {
+            print('[IaService] Resposta inesperada: $textoBruto');
+          }
+          return {'erro': 'Resposta inesperada do Gemini.'};
         }
       } else {
         String mensagemErro;
@@ -144,11 +177,11 @@ Se nenhuma imagem for suficientemente similar, responda:
         } catch (_) {
           mensagemErro = 'HTTP ${response.statusCode}';
         }
-        print('[IaService] Erro: $mensagemErro');
+        if (kDebugMode) print('[IaService] Erro: $mensagemErro');
         return {'erro': 'Erro Gemini: $mensagemErro'};
       }
     } catch (e) {
-      print('[IaService] Exceção: $e');
+      if (kDebugMode) print('[IaService] Exceção: $e');
       return {'erro': 'Exceção: $e'};
     }
   }

@@ -1,3 +1,13 @@
+// ============================================================
+// ARQUIVO: lib/epico2_ia/classificador_service.dart
+//
+// CORREÇÕES APLICADAS
+// [MÉDIO] Cast seguro do output TFLite: o original usava
+//         List.from(output[0] as List) que pode lançar TypeError
+//         em runtime se os elementos não forem double puro.
+//         Substituído por .map((e) => (e as num).toDouble()).
+// ============================================================
+
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -5,7 +15,7 @@ import 'package:image/image.dart' as img;
 
 class Resultado {
   final String layout;
-  final double confianca; // 0.0 a 1.0
+  final double confianca;
 
   Resultado(this.layout, this.confianca);
 }
@@ -23,8 +33,6 @@ class ClassificadorService {
     final labelsData =
         await rootBundle.loadString('assets/modelo/labels.txt');
 
-    // Melhoria 2: remove o prefixo numérico exportado pelo Teachable Machine
-    // Ex.: "0 Layout A"  →  "Layout A"
     _labels = labelsData
         .split('\n')
         .map((l) => l.trim())
@@ -36,13 +44,11 @@ class ClassificadorService {
   Future<List<Resultado>> classificar(File imagem) async {
     if (_interpreter == null) throw Exception('Modelo não carregado');
 
-    // 1. Redimensiona para 224x224 (padrão do Teachable Machine)
     final bytes = await imagem.readAsBytes();
     final original = img.decodeImage(bytes)!;
     final redimensionada =
         img.copyResize(original, width: 224, height: 224);
 
-    // 2. Normaliza pixels para [0, 1]
     final input = List.generate(
       1,
       (_) => List.generate(
@@ -58,15 +64,18 @@ class ClassificadorService {
       ),
     );
 
-    // 3. Prepara saída
     final output =
         List.filled(1 * _labels.length, 0.0).reshape([1, _labels.length]);
 
-    // 4. Inferência
     _interpreter!.run(input, output);
 
-    // 5. Monta resultados ordenados por confiança
-    final confiancas = List<double>.from(output[0] as List);
+    // ✅ CORREÇÃO [MÉDIO]: cast seguro — output[0] é List dinâmico;
+    // elementos podem ser int ou double dependendo do delegate TFLite.
+    // O original "List<double>.from(output[0] as List)" lança TypeError
+    // quando os elementos são int. O map abaixo cobre ambos os casos.
+    final raw = output[0] as List;
+    final confiancas = raw.map((e) => (e as num).toDouble()).toList();
+
     final resultados = List.generate(
       _labels.length,
       (i) => Resultado(_labels[i], confiancas[i]),
